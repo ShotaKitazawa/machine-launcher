@@ -1,0 +1,158 @@
+openapi: "3.0.2"
+info:
+  title: machine-launcher
+  version: "v0.1.0"
+  license:
+    name: MIT
+    url: "https://github.com/ShotaKitazawa/machine-launcher/blob/main/LICENSE"
+
+paths:
+  /api/servers:
+    get:
+      security: []
+      summary: "List Servers"
+      operationId: "list_servers"
+      tags:
+      - app
+      responses:
+        200:
+          $ref: "#/components/responses/Servers"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+
+  /api/servers/start:
+    put:
+      security: []
+      summary: "Start server"
+      operationId: "start_server"
+      tags:
+      - app
+      requestBody:
+        $ref: "#/components/requestBodies/StartServer"
+      responses:
+        202:
+          $ref: "#/components/responses/Server"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Forbidden"
+        403:
+          $ref: "#/components/responses/Forbidden"
+
+  /api/servers/stop:
+    put:
+      security: []
+      summary: "Stop server"
+      operationId: "stop_server"
+      tags:
+      - app
+      requestBody:
+        $ref: "#/components/requestBodies/StopServer"
+      responses:
+        202:
+          $ref: "#/components/responses/Server"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Forbidden"
+        403:
+          $ref: "#/components/responses/Forbidden"
+
+components:
+  securitySchemes:
+    Bearer:
+      type: http
+      scheme: bearer
+      description: Credentials or access token for API
+
+  requestBodies:
+    StartServer:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ServerName"
+    StopServer:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ServerName"
+
+  responses:
+    Servers:
+      description: "Succeed to list servers"
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Server"
+    Server:
+      description: "Succeed to get server"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Server"
+
+
+    TemporaryRedirect:
+      description: "Temporary Redirect"
+    BadRequest:
+      description: "Bad Request"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    Unauthorized:
+      description: "Unauthorized"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    Forbidden:
+      description: "Forbidden"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    NotFound:
+      description: "Not Found"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+
+  schemas:
+    ServerName:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+    Server:
+      type: object
+      properties:
+        name:
+          type: string
+        hostname:
+          type: string
+        running:
+          type: boolean
+        reason:
+          type: string
+      required:
+        - name
+        - hostname
+        - running
+
+    ErrorMessage:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

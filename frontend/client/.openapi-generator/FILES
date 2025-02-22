@@ -1,0 +1,17 @@
+.gitignore
+.travis.yml
+Cargo.toml
+README.md
+docs/AppApi.md
+docs/ErrorMessage.md
+docs/Server.md
+docs/ServerName.md
+git_push.sh
+src/apis/app_api.rs
+src/apis/configuration.rs
+src/apis/mod.rs
+src/lib.rs
+src/models/error_message.rs
+src/models/mod.rs
+src/models/server.rs
+src/models/server_name.rs
