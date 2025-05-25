@@ -9,14 +9,18 @@ generate-frontend-client: ## Generate client code for frontend
 	openapi-generator-cli generate -g rust -i /local/openapi.yaml -o /local/frontend/client
 
 .PHONY: build-frontend
-build-frontend: trunk ## Build frontend
+build-frontend: wasm32-unknown-unknown trunk ## Build frontend
 	cd frontend && RUSTFLAGS='--cfg getrandom_backend="wasm_js"' trunk build
 
 .PHONY: build-backend
 build-backend: ## Build backend
-	cd backend && cargo build
+	cd backend && cargo build --release
 
 ##@ Tools
+
+.PHONY: wasm32-unknown-unknown
+wasm32-unknown-unknown: ## install wasm32-unknown-unknown target
+	rustup target add wasm32-unknown-unknown
 
 .PHONY: trunk
 trunk: ## install trunk
