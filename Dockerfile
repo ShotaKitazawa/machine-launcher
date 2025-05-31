@@ -12,8 +12,6 @@ WORKDIR /app/
 COPY Makefile .
 COPY utils ./utils
 COPY backend ./backend
-COPY --from=frontend-builder /app/frontend/public /app/frontend/public
-COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 RUN make build-backend
 
 # ===== Runtime Stage =====
@@ -23,6 +21,8 @@ RUN apt-get update \
       && apt-get install -y libssl-dev ca-certificates \
       && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /app/backend
 COPY --from=backend-builder /app/backend/target/release/machine-launcher ./machine-launcher
+COPY --from=frontend-builder /app/frontend/public ../frontend/public
+COPY --from=frontend-builder /app/frontend/dist ../frontend/dist
 ENTRYPOINT ["./machine-launcher"]
