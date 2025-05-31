@@ -69,10 +69,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // OIDC Client
     let http_client = &reqwest::Client::new();
-    let oidc_provider_metadata =
-        CoreProviderMetadata::discover_async(IssuerUrl::new(config.oidc.issuer)?, http_client)
-            .await
-            .expect("Failed to discover provider metadata");
+    let oidc_provider_metadata = CoreProviderMetadata::discover_async(
+        IssuerUrl::new(config.oidc.provider_url)?,
+        http_client,
+    )
+    .await
+    .expect("Failed to discover provider metadata");
     let oidc_client = OidcClient::from_provider_metadata(
         oidc_provider_metadata.clone(),
         ClientId::new(config.oidc.client_id),
@@ -109,7 +111,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app_state = Arc::new(AppState {
         drivers,
         oidc_client,
-        oidc_audience: config.url,
         role_attribute_path_expr,
         pkce_verifiers,
     });
