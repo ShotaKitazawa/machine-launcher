@@ -20,7 +20,6 @@ pub type OidcClient<HasTokenUrl = EndpointMaybeSet, HasUserInfoUrl = EndpointMay
 
 pub struct AppState {
     pub drivers: HashMap<String, Arc<dyn PowerManagerTrait>>,
-    pub oidc_audience: String,
     pub role_attribute_path_expr: Expression<'static>,
     pub pkce_verifiers: Mutex<HashMap<String, PkceCodeVerifier>>, // Store PKCE verifiers temporarily
     pub oidc_client: OidcClient<EndpointSet, EndpointMaybeSet>,

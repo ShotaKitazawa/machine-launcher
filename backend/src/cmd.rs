@@ -20,25 +20,17 @@ pub struct Config {
 
 #[derive(Debug, Deserialize)]
 pub struct OidcConfig {
-    // OIDC Issuer Identifier. (https://openid.net/specs/openid-connect-core-1_0.html)
-    pub issuer: String,
+    // The URL of OpenID Provider. (https://openid.net/specs/openid-connect-core-1_0.html#Terminology)
+    pub provider_url: String,
 
-    // OAuth2.0 Client ID. (https://www.rfc-editor.org/rfc/rfc6749.html)
+    // OIDC Client Identifer. (https://openid.net/specs/openid-connect-core-1_0.html#Terminology)
     pub client_id: String,
 
-    // OAuth2.0 Client Secret. (https://www.rfc-editor.org/rfc/rfc6749.html)
+    // OIDC Client Secret. (https://openid.net/specs/openid-connect-core-1_0.html#Terminology)
     pub client_secret: String,
-
-    // OAuth2.0 Scope. (https://www.rfc-editor.org/rfc/rfc6749.html)
-    #[serde(default = "default_oidc_scopes")]
-    pub scopes: String,
 
     // role_attribute_path is in JMESPath format. Only entities that return true are allowed.
     pub role_attribute_path: String,
-}
-
-fn default_oidc_scopes() -> String {
-    String::from("openid profile email")
 }
 
 #[derive(Debug, Deserialize)]

@@ -1,7 +1,7 @@
 url = "${URL}"
 
 [oidc]
-issuer = "https://kanata.jp.auth0.com/"
+provider_url = "https://kanata.jp.auth0.com/"
 client_id = "${AUTH0_CLIENT_ID}"
 client_secret = "${AUTH0_CLIENT_SECRET}"
 role_attribute_path = "contains(\"https://kanatakita.com/roles\", 'admin')"
