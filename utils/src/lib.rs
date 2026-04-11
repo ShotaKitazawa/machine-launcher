@@ -8,7 +8,7 @@ pub const COOKIE_KEY: &str = "token";
 
 pub fn all_claims_from_jwt(jwt: &str) -> Result<HashMap<String, Value>, Error> {
     let token_payload = String::from_utf8(
-        BASE64_STANDARD_NO_PAD
+        BASE64_URL_SAFE_NO_PAD
             .decode(jwt.split('.').collect::<Vec<&str>>()[1])
             .map_err(|e| {
                 Error::new(

@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use axum::{http::StatusCode, response::Response};
 use jmespath::Expression;
 use openidconnect::core::CoreClient;
-use openidconnect::{EndpointMaybeSet, EndpointNotSet, EndpointSet, PkceCodeVerifier};
+use openidconnect::{EndpointMaybeSet, EndpointNotSet, EndpointSet};
 
 use crate::drivers::traits::{PowerManagerTrait, PowerStatus};
 
@@ -21,8 +21,12 @@ pub type OidcClient<HasTokenUrl = EndpointMaybeSet, HasUserInfoUrl = EndpointMay
 pub struct AppState {
     pub drivers: HashMap<String, Arc<dyn PowerManagerTrait>>,
     pub role_attribute_path_expr: Expression<'static>,
-    pub pkce_verifiers: Mutex<HashMap<String, PkceCodeVerifier>>, // Store PKCE verifiers temporarily
-    pub oidc_client: OidcClient<EndpointSet, EndpointMaybeSet>,
+    pub oidc_client: OidcClient,
+    pub oidc_client_id: String,
+    pub oidc_authorization_endpoint: String,
+    pub oidc_token_endpoint: String,
+    /// nonce → expiry Unix timestamp (seconds). Used for replay attack prevention.
+    pub nonce_store: Arc<Mutex<HashMap<String, i64>>>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -78,5 +82,5 @@ impl axum::response::IntoResponse for Error {
 pub mod cmd;
 pub mod drivers;
 pub mod handlers_app;
-pub mod handlers_oauth;
+pub mod handlers_config;
 pub mod middlewares;

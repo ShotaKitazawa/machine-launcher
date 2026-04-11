@@ -9,12 +9,11 @@ use jmespath::compile;
 use machine_launcher::drivers::ipmi::IpmiDriver;
 use once_cell::sync::Lazy;
 use openidconnect::{
-    core::CoreProviderMetadata, ClientId, ClientSecret, IssuerUrl, RedirectUrl, TokenUrl,
+    core::CoreProviderMetadata, ClientId, IssuerUrl,
 };
 use regex::Regex;
 use tokio::net::TcpListener;
 use tower_http::{services::ServeDir, trace::TraceLayer};
-use url::Url;
 
 use machine_launcher::{
     cmd::{Args, Config, DriverType},
@@ -67,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
     }
 
-    // OIDC Client
+    // OIDC Client (for JWT verification only — token exchange is handled by the frontend)
     let http_client = &reqwest::Client::new();
     let oidc_provider_metadata = CoreProviderMetadata::discover_async(
         IssuerUrl::new(config.oidc.provider_url)?,
@@ -75,33 +74,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .await
     .expect("Failed to discover provider metadata");
+
+    let oidc_authorization_endpoint = oidc_provider_metadata
+        .authorization_endpoint()
+        .to_string();
+    let oidc_token_endpoint = oidc_provider_metadata
+        .token_endpoint()
+        .expect("Provider metadata must have token_endpoint")
+        .to_string();
+    let oidc_client_id = config.oidc.client_id.clone();
+
     let oidc_client = OidcClient::from_provider_metadata(
-        oidc_provider_metadata.clone(),
+        oidc_provider_metadata,
         ClientId::new(config.oidc.client_id),
-        Some(ClientSecret::new(config.oidc.client_secret)),
-    )
-    .set_redirect_uri(RedirectUrl::new(
-        Url::parse(&config.url)
-            .unwrap()
-            .join("/auth/callback")
-            .unwrap()
-            .to_string(),
-    )?)
-    // TODO: use set_revocation_url
-    //.set_revocation_url(RevocationUrl::new(
-    //    oidc_provider_metadata
-    //        .additional_metadata()
-    //        .revocation_endpoint
-    //        .clone(),
-    //)?)
-    .set_token_uri(TokenUrl::new(
-        oidc_provider_metadata
-            .clone()
-            .token_endpoint()
-            .unwrap()
-            .to_string(),
-    )?);
-    let pkce_verifiers = Mutex::new(HashMap::new());
+        None, // No client_secret: frontend is a public client using PKCE
+    );
 
     // Authorization based on ID Token
     let role_attribute_path_expr = compile(&config.oidc.role_attribute_path)
@@ -112,7 +99,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         drivers,
         oidc_client,
         role_attribute_path_expr,
-        pkce_verifiers,
+        oidc_client_id,
+        oidc_authorization_endpoint,
+        oidc_token_endpoint,
+        nonce_store: Arc::new(Mutex::new(HashMap::new())),
     });
 
     // Routing
@@ -121,7 +111,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "/api",
             machine_launcher::handlers_app::routes(app_state.clone()),
         )
-        .nest("/auth", machine_launcher::handlers_oauth::routes())
+        .nest(
+            "/api",
+            machine_launcher::handlers_config::routes(),
+        )
         .nest_service("/public", get_service(ServeDir::new(STATIC_FILES_PATH)))
         .fallback_service(get_service(ServeDir::new(COMPILED_FILES_PATH)))
         .with_state(app_state)

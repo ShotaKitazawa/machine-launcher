@@ -53,6 +53,9 @@ pub async fn list_servers(configuration: &configuration::Configuration, ) -> Res
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
     }
+    if let Some(ref token) = configuration.bearer_access_token {
+        req_builder = req_builder.bearer_auth(token);
+    }
 
     let req = req_builder.build()?;
     let resp = configuration.client.execute(req).await?;
@@ -78,6 +81,9 @@ pub async fn start_server(configuration: &configuration::Configuration, server_n
 
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    if let Some(ref token) = configuration.bearer_access_token {
+        req_builder = req_builder.bearer_auth(token);
     }
     req_builder = req_builder.json(&p_server_name);
 
@@ -105,6 +111,9 @@ pub async fn stop_server(configuration: &configuration::Configuration, server_na
 
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    if let Some(ref token) = configuration.bearer_access_token {
+        req_builder = req_builder.bearer_auth(token);
     }
     req_builder = req_builder.json(&p_server_name);
 

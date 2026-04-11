@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::{collections::HashSet, str::FromStr};
 
 use axum::RequestExt;
@@ -8,11 +9,11 @@ use axum::{
     response::IntoResponse,
 };
 use axum_extra::{
-    extract::cookie::CookieJar,
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
 use jmespath::Variable;
+use chrono::Local;
 use openidconnect::{
     core::{CoreIdToken, CoreIdTokenClaims},
     Nonce, NonceVerifier,
@@ -20,7 +21,7 @@ use openidconnect::{
 use serde::{Deserialize, Serialize};
 
 use crate::{AppState, Error};
-use machine_launcher_utils::{all_claims_from_jwt, COOKIE_KEY};
+use machine_launcher_utils::all_claims_from_jwt;
 
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
@@ -33,54 +34,49 @@ pub struct Claims {
     _permissions: Option<HashSet<String>>,
 }
 
-// TODO: use real nonce from input
-struct DummyNonceVerifier {}
-impl NonceVerifier for &DummyNonceVerifier {
-    fn verify(self, _: Option<&Nonce>) -> Result<(), String> {
+struct StoredNonceVerifier {
+    nonce_store: Arc<Mutex<HashMap<String, i64>>>,
+}
+impl NonceVerifier for &StoredNonceVerifier {
+    fn verify(self, nonce: Option<&Nonce>) -> Result<(), String> {
+        let nonce_val = nonce.ok_or("nonce claim is missing from token")?;
+        let nonce_str = nonce_val.secret();
+        let mut store = self
+            .nonce_store
+            .lock()
+            .map_err(|_| "nonce store lock error".to_string())?;
+        let expiry = store
+            .remove(nonce_str)
+            .ok_or("nonce not found or already used")?;
+        if Local::now().timestamp() > expiry {
+            return Err("nonce has expired".to_string());
+        }
         Ok(())
     }
 }
 
 pub async fn auth_middleware(
-    cookie_jar: CookieJar,
     State(state): State<Arc<AppState>>,
     mut req: Request,
     next: Next,
 ) -> Result<impl IntoResponse, Error> {
-    // get credential
-    let mut id_token_opt = cookie_jar
-        .get(COOKIE_KEY)
-        .map(|cookie| cookie.value().to_string());
-    if id_token_opt.is_none() {
-        id_token_opt = Some(
-            req.extract_parts::<TypedHeader<Authorization<Bearer>>>()
-                .await
-                .map_err(|_| {
-                    Error::Unauthorized("You are not logged in, please provide token".into())
-                })?
-                .token()
-                .to_string(),
-        );
-    }
-    let id_token_str = id_token_opt.unwrap();
+    // get credential from Authorization: Bearer header
+    let id_token_str = req
+        .extract_parts::<TypedHeader<Authorization<Bearer>>>()
+        .await
+        .map_err(|_| Error::Unauthorized("You are not logged in, please provide token".into()))?
+        .token()
+        .to_string();
 
-    //cookie_jar
-    //    .get(COOKIE_KEY)
-    //    .map(|cookie| cookie.value().to_string())
-    //    .or_else(|| {
-    //        req.extract_parts::<TypedHeader<Authorization<Bearer>>>()
-    //            .await
-    //            .ok_or_else(|| {
-    //                Error::Unauthorized("You are not logged in, please provide token".into())
-    //            })?
-    //    })
-    //    .ok_or_else(|| Error::Unauthorized("You are not logged in, please provide token".into()))?;
     let id_token: CoreIdToken = openidconnect::IdToken::from_str(&id_token_str)
         .map_err(|e| Error::Forbidden(format!("Provided token is not IdToken: {:?}", e).into()))?;
+    let nonce_verifier = StoredNonceVerifier {
+        nonce_store: state.nonce_store.clone(),
+    };
     let _: &CoreIdTokenClaims = id_token
         .claims(
             &state.oidc_client.id_token_verifier(),
-            &DummyNonceVerifier {},
+            &nonce_verifier,
         )
         .map_err(|e| Error::Forbidden(format!("Provided token is invalid: {:?}", e).into()))?;
 

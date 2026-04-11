@@ -26,9 +26,6 @@ pub struct OidcConfig {
     // OIDC Client Identifer. (https://openid.net/specs/openid-connect-core-1_0.html#Terminology)
     pub client_id: String,
 
-    // OIDC Client Secret. (https://openid.net/specs/openid-connect-core-1_0.html#Terminology)
-    pub client_secret: String,
-
     // role_attribute_path is in JMESPath format. Only entities that return true are allowed.
     pub role_attribute_path: String,
 }
