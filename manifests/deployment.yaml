@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: machine-launcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: machine-launcher
+  template:
+    metadata:
+      labels:
+        app: machine-launcher
+    spec:
+      containers:
+        - name: machine-launcher
+          image: ghcr.io/ShotaKitazawa/machine-launcher
+          args:
+            - --config
+            - /etc/machine-launcher/config.toml
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: config
+              mountPath: /etc/machine-launcher
+      volumes:
+        - name: config
+          configMap:
+            name: machine-launcher-config
