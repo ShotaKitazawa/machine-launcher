@@ -37,3 +37,89 @@ pub fn all_claims_from_jwt(jwt: &str) -> Result<HashMap<String, Value>, Error> {
     };
     Ok(all_claims)
 }
+
+// --- API schema types ---
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct Server {
+    pub name: String,
+    pub hostname: String,
+    pub running: bool,
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct ServerName {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct ErrorMessage {
+    pub error: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct OidcConfigResponse {
+    pub client_id: String,
+    pub authorization_endpoint: String,
+    pub token_endpoint: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct NonceResponse {
+    pub nonce: String,
+}
+
+// --- Endpoint trait ---
+
+pub trait Endpoint {
+    type Request: serde::Serialize;
+    type Response: serde::de::DeserializeOwned;
+    const PATH: &'static str;
+    const METHOD: &'static str;
+}
+
+pub struct ListServers;
+impl Endpoint for ListServers {
+    type Request = ();
+    type Response = Vec<Server>;
+    const PATH: &'static str = "/api/servers";
+    const METHOD: &'static str = "GET";
+}
+
+pub struct StartServer;
+impl Endpoint for StartServer {
+    type Request = ServerName;
+    type Response = Server;
+    const PATH: &'static str = "/api/servers/start";
+    const METHOD: &'static str = "PUT";
+}
+
+pub struct StopServer;
+impl Endpoint for StopServer {
+    type Request = ServerName;
+    type Response = Server;
+    const PATH: &'static str = "/api/servers/stop";
+    const METHOD: &'static str = "PUT";
+}
+
+pub struct GetOidcConfig;
+impl Endpoint for GetOidcConfig {
+    type Request = ();
+    type Response = OidcConfigResponse;
+    const PATH: &'static str = "/api/oidc-config";
+    const METHOD: &'static str = "GET";
+}
+
+pub struct GetNonce;
+impl Endpoint for GetNonce {
+    type Request = ();
+    type Response = NonceResponse;
+    const PATH: &'static str = "/api/auth/nonce";
+    const METHOD: &'static str = "GET";
+}

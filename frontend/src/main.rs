@@ -10,8 +10,6 @@ use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
 use machine_launcher_common::all_claims_from_jwt;
-use openapi::apis::app_api::list_servers;
-use openapi::apis::configuration::Configuration;
 
 mod components;
 use components::contents::Contents;
@@ -25,13 +23,6 @@ const TOKEN_KEY: &str = "id_token";
 const PKCE_VERIFIER_KEY: &str = "pkce_verifier";
 const OAUTH_STATE_KEY: &str = "oauth_state";
 const NONCE_KEY: &str = "nonce";
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct OidcConfig {
-    pub client_id: String,
-    pub authorization_endpoint: String,
-    pub token_endpoint: String,
-}
 
 #[derive(Debug, Deserialize)]
 struct TokenResponse {
@@ -54,20 +45,19 @@ fn generate_state() -> String {
     URL_SAFE_NO_PAD.encode(bytes)
 }
 
-pub async fn fetch_oidc_config() -> Option<OidcConfig> {
-    let url = format!("{}/api/oidc-config", window().origin());
-    let resp = reqwest::get(&url).await.ok()?;
-    resp.json::<OidcConfig>().await.ok()
+pub async fn fetch_oidc_config() -> Option<machine_launcher_common::OidcConfigResponse> {
+    client::Client::new(window().origin())
+        .get_oidc_config()
+        .await
+        .ok()
 }
 
 pub async fn fetch_nonce() -> Option<String> {
-    #[derive(Deserialize)]
-    struct NonceResponse {
-        nonce: String,
-    }
-    let url = format!("{}/api/auth/nonce", window().origin());
-    let resp = reqwest::get(&url).await.ok()?;
-    resp.json::<NonceResponse>().await.ok().map(|r| r.nonce)
+    client::Client::new(window().origin())
+        .get_nonce()
+        .await
+        .ok()
+        .map(|r| r.nonce)
 }
 
 pub async fn start_login() {
@@ -137,8 +127,8 @@ async fn handle_callback() -> Option<String> {
         js_sys::encode_uri_component(&verifier),
     );
 
-    let client = reqwest::Client::new();
-    let resp = client
+    let http_client = reqwest::Client::new();
+    let resp = http_client
         .post(&config.token_endpoint)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(body)
@@ -167,25 +157,21 @@ fn parse_query_string(search: &str) -> std::collections::HashMap<String, String>
 
 #[function_component]
 fn App() -> Html {
-    // States
     let user = use_state(|| None as Option<Userinfo>);
     let servers = use_state(|| vec![] as Vec<Server>);
     let token = use_state(|| None as Option<String>);
 
-    // On mount: handle /callback or load token from localStorage
     {
         let user = user.clone();
         let token = token.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
-                // Check if we're in the OAuth callback
                 let search = window().location().search().unwrap_or_default();
                 if search.contains("code=") {
                     handle_callback().await;
                     return;
                 }
 
-                // Load existing token from localStorage
                 if let Ok(t) = LocalStorage::get::<String>(TOKEN_KEY) {
                     if let Ok(claims) = all_claims_from_jwt(&t) {
                         let expired_at = claims
@@ -214,7 +200,6 @@ fn App() -> Html {
         });
     };
 
-    // Poll server list every 10 seconds
     {
         let servers = servers.clone();
         let user = user.clone();
@@ -227,11 +212,12 @@ fn App() -> Html {
                 let current_token = (*token).clone();
                 let servers = servers.clone();
                 let user = user.clone();
-                let mut c = Configuration::new();
-                c.base_path = window().origin();
-                c.bearer_access_token = current_token;
                 spawn_local(async move {
-                    match list_servers(&c).await {
+                    let mut c = client::Client::new(window().origin());
+                    if let Some(t) = current_token {
+                        c = c.with_token(t);
+                    }
+                    match c.list_servers().await {
                         Ok(res) => {
                             if !compare_servers(res.clone(), servers.to_vec()) {
                                 servers.set(res)
@@ -239,7 +225,6 @@ fn App() -> Html {
                         }
                         Err(e) => {
                             gloo::console::log!(format!("{:?}", e));
-                            // TODO: display error message in browser
                             user.set(None)
                         }
                     }
@@ -247,7 +232,7 @@ fn App() -> Html {
             };
             f();
             let handle = Interval::new(10000, f);
-            move || drop(handle) // cleanup
+            move || drop(handle)
         });
     };
 

@@ -2,10 +2,6 @@ use gloo::utils::window;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
-use openapi::apis::app_api::{start_server, stop_server};
-use openapi::apis::configuration::Configuration;
-use openapi::models::ServerName;
-
 #[derive(PartialEq, Properties)]
 pub struct ServerProps {
     pub server: crate::state::Server,
@@ -88,19 +84,15 @@ pub fn ServerModal(props: &ServerDialogProps) -> Html {
         let is_open = props.is_open.clone();
         Callback::from(move |_: MouseEvent| {
             let server_name = server_name.clone();
-            let mut c = Configuration::new();
-            c.base_path = window().origin();
+            let c = client::Client::new(window().origin());
             spawn_local(async move {
-                match is_running {
-                    true => {
-                        if let Err(e) = stop_server(&c, ServerName { name: server_name }).await {
-                            gloo::console::log!(format!("{:?}", e))
-                        }
+                if is_running {
+                    if let Err(e) = c.stop_server(server_name).await {
+                        gloo::console::log!(format!("{:?}", e))
                     }
-                    false => {
-                        if let Err(e) = start_server(&c, ServerName { name: server_name }).await {
-                            gloo::console::log!(format!("{:?}", e))
-                        }
+                } else {
+                    if let Err(e) = c.start_server(server_name).await {
+                        gloo::console::log!(format!("{:?}", e))
                     }
                 }
             });

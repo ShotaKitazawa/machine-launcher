@@ -26,6 +26,11 @@ run = [
 description = "Build backend and frontend"
 depends = ["build-backend", "build-frontend"]
 
+[tasks.ci-check-frontend]
+description = "Type-check frontend (WASM)"
+dir = "{{config_root}}/frontend"
+run = "cargo check --target wasm32-unknown-unknown"
+
 [tasks.ci-test-backend]
 description = "Run backend tests"
 dir = "{{config_root}}/backend"
