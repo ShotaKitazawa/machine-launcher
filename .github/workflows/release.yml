@@ -1,0 +1,25 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: imranismail/setup-kustomize@v2
+      - name: Update image tag
+        run: |
+          cd manifests
+          kustomize edit set image ghcr.io/ShotaKitazawa/machine-launcher=${{ github.ref_name }}
+      - name: Build manifests
+        run: kustomize build manifests/ > install.yaml
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: install.yaml
+          generate_release_notes: true
