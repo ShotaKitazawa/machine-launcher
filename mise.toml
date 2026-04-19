@@ -1,6 +1,10 @@
 [tools]
 rust = "stable"
 
+[tasks.generate]
+description = "Generate all code"
+run = "mise run generate-frontend-client"
+
 [tasks.generate-frontend-client]
 description = "Generate client code for frontend"
 run = "docker run --rm -v ${PWD}:/local openapitools/openapi-generator-cli generate -g rust -i /local/openapi.yaml -o /local/frontend/client"
@@ -32,10 +36,22 @@ description = "Lint backend"
 dir = "{{config_root}}/backend"
 run = "cargo clippy -- -D warnings"
 
+[tasks.format]
+description = "Format all code"
+run = "mise run format-backend"
+
 [tasks.format-backend]
 description = "Format backend code"
 dir = "{{config_root}}/backend"
 run = "cargo fmt"
+
+[tasks.pre-merge]
+description = "Run generate, format, and CI checks before merging"
+run = [
+  "mise run generate",
+  "mise run format",
+  "mise run ci",
+]
 
 [tasks.ci]
 description = "Run all CI checks"
