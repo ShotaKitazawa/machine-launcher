@@ -1,0 +1,42 @@
+[tools]
+rust = "stable"
+
+[tasks.generate-frontend-client]
+description = "Generate client code for frontend"
+run = "docker run --rm -v ${PWD}:/local openapitools/openapi-generator-cli generate -g rust -i /local/openapi.yaml -o /local/frontend/client"
+
+[tasks.build-backend]
+description = "Build backend"
+dir = "{{config_root}}/backend"
+run = "cargo build --release"
+
+[tasks.build-frontend]
+description = "Build frontend (WASM)"
+dir = "{{config_root}}/frontend"
+run = [
+  "rustup target add wasm32-unknown-unknown",
+  "trunk build",
+]
+
+[tasks.build]
+description = "Build backend and frontend"
+depends = ["build-backend", "build-frontend"]
+
+[tasks.ci-test-backend]
+description = "Run backend tests"
+dir = "{{config_root}}/backend"
+run = "cargo test"
+
+[tasks.ci-lint-backend]
+description = "Lint backend"
+dir = "{{config_root}}/backend"
+run = "cargo clippy -- -D warnings"
+
+[tasks.format-backend]
+description = "Format backend code"
+dir = "{{config_root}}/backend"
+run = "cargo fmt"
+
+[tasks.ci]
+description = "Run all CI checks"
+depends = ["ci-test-backend", "ci-lint-backend"]

@@ -1,18 +1,18 @@
 # ===== Build frontend Stage =====
 FROM rust:1 AS frontend-builder
 WORKDIR /app/
-COPY Makefile .
 COPY utils ./utils
 COPY frontend ./frontend
-RUN make build-frontend
+RUN rustup target add wasm32-unknown-unknown \
+      && cargo install --locked trunk \
+      && cd frontend && trunk build
 
 # ===== Build backend Stage =====
 FROM rust:1 AS backend-builder
 WORKDIR /app/
-COPY Makefile .
 COPY utils ./utils
 COPY backend ./backend
-RUN make build-backend
+RUN cd backend && cargo build --release
 
 # ===== Runtime Stage =====
 FROM debian:bookworm-slim
