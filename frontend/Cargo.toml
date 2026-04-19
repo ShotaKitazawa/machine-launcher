@@ -24,6 +24,6 @@ serde_json = "1"
 path = "./client"
 version = "*"
 
-[dependencies.machine-launcher-utils]
-path = "../utils"
+[dependencies.machine-launcher-common]
+path = "../common"
 version = "*"

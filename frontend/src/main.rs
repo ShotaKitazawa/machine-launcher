@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
-use machine_launcher_utils::all_claims_from_jwt;
+use machine_launcher_common::all_claims_from_jwt;
 use openapi::apis::app_api::list_servers;
 use openapi::apis::configuration::Configuration;
 

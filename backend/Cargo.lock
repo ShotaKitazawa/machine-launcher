@@ -1362,7 +1362,7 @@ dependencies = [
  "hostname-validator",
  "jmespath",
  "listenfd",
- "machine-launcher-utils",
+ "machine-launcher-common",
  "once_cell",
  "openidconnect",
  "ping",
@@ -1384,7 +1384,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "machine-launcher-utils"
+name = "machine-launcher-common"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",

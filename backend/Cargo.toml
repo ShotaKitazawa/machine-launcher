@@ -44,6 +44,6 @@ path = "./jmespath/jmespath"
 version = "*"
 features = ["sync"]
 
-[dependencies.machine-launcher-utils]
-path = "../utils"
+[dependencies.machine-launcher-common]
+path = "../common"
 version = "*"

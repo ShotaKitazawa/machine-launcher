@@ -1,5 +1,5 @@
 [package]
-name = "machine-launcher-utils"
+name = "machine-launcher-common"
 version = "0.1.0"
 edition = "2021"
 

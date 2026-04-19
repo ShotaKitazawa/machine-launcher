@@ -1231,6 +1231,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04cbf5b083de1c7e0222a7a51dbfdba1cbe1c6ab0b15e29fff3f6c077fd9cd9f"
 
 [[package]]
+name = "machine-launcher-common"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "serde_json",
+]
+
+[[package]]
 name = "machine-launcher-frontend"
 version = "0.1.0"
 dependencies = [
@@ -1239,7 +1247,7 @@ dependencies = [
  "gloo 0.11.0",
  "gloo-timers 0.3.0",
  "js-sys",
- "machine-launcher-utils",
+ "machine-launcher-common",
  "openapi",
  "reqwest",
  "serde",
@@ -1251,14 +1259,6 @@ dependencies = [
  "wasm-cookies",
  "wasm-timer",
  "yew",
-]
-
-[[package]]
-name = "machine-launcher-utils"
-version = "0.1.0"
-dependencies = [
- "base64",
- "serde_json",
 ]
 
 [[package]]

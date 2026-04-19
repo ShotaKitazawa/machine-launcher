@@ -21,7 +21,7 @@ use openidconnect::{
 use serde::{Deserialize, Serialize};
 
 use crate::{AppState, Error};
-use machine_launcher_utils::all_claims_from_jwt;
+use machine_launcher_common::all_claims_from_jwt;
 
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
