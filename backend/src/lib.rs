@@ -63,15 +63,10 @@ impl Error {
 }
 impl axum::response::IntoResponse for Error {
     fn into_response(self) -> Response {
-        #[derive(Debug, serde::Serialize)]
-        struct ErrorResponse {
-            error: String,
-        }
-
         tracing::error!("{}", self);
         (
             self.status_code(),
-            axum::Json(ErrorResponse {
+            axum::Json(machine_launcher_common::ErrorMessage {
                 error: format!("{}", self),
             }),
         )
@@ -84,3 +79,23 @@ pub mod drivers;
 pub mod handlers_app;
 pub mod handlers_config;
 pub mod middlewares;
+
+#[cfg(feature = "openapi-gen")]
+#[derive(utoipa::OpenApi)]
+#[openapi(
+    paths(
+        handlers_app::machine_status,
+        handlers_app::start_machine,
+        handlers_app::stop_machine,
+        handlers_config::oidc_config,
+        handlers_config::issue_nonce,
+    ),
+    components(schemas(
+        machine_launcher_common::Server,
+        machine_launcher_common::ServerName,
+        machine_launcher_common::ErrorMessage,
+        machine_launcher_common::OidcConfigResponse,
+        machine_launcher_common::NonceResponse,
+    ))
+)]
+pub struct ApiDoc;

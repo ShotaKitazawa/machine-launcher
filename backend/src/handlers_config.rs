@@ -16,6 +16,11 @@ pub fn routes() -> Router<Arc<AppState>> {
         .route(GetNonce::PATH, get(issue_nonce))
 }
 
+#[cfg_attr(feature = "openapi-gen", utoipa::path(
+    get,
+    path = "/api/oidc-config",
+    responses((status = 200, body = OidcConfigResponse))
+))]
 async fn oidc_config(State(state): State<Arc<AppState>>) -> Json<OidcConfigResponse> {
     Json(OidcConfigResponse {
         client_id: state.oidc_client_id.clone(),
@@ -24,6 +29,11 @@ async fn oidc_config(State(state): State<Arc<AppState>>) -> Json<OidcConfigRespo
     })
 }
 
+#[cfg_attr(feature = "openapi-gen", utoipa::path(
+    get,
+    path = "/api/auth/nonce",
+    responses((status = 200, body = NonceResponse))
+))]
 async fn issue_nonce(State(state): State<Arc<AppState>>) -> Json<NonceResponse> {
     let bytes: [u8; 32] = rand::random();
     let nonce = URL_SAFE_NO_PAD.encode(bytes);

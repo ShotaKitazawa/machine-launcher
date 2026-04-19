@@ -1,6 +1,5 @@
 use machine_launcher_common::{
-    Endpoint, GetNonce, GetOidcConfig, ListServers, NonceResponse, OidcConfigResponse, Server,
-    ServerName, StartServer, StopServer,
+    Endpoint, GetNonce, GetOidcConfig, ListServers, ServerName, StartServer, StopServer,
 };
 
 pub struct Client {

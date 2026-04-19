@@ -1,158 +1,183 @@
-openapi: "3.0.2"
+openapi: 3.1.0
 info:
   title: machine-launcher
-  version: "v0.1.0"
+  description: ''
   license:
-    name: MIT
-    url: "https://github.com/ShotaKitazawa/machine-launcher/blob/main/LICENSE"
-
+    name: ''
+  version: 0.1.0
 paths:
+  /api/auth/nonce:
+    get:
+      tags:
+      - handlers_config
+      operationId: issue_nonce
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NonceResponse'
+  /api/oidc-config:
+    get:
+      tags:
+      - handlers_config
+      operationId: oidc_config
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OidcConfigResponse'
   /api/servers:
     get:
-      security: []
-      summary: "List Servers"
-      operationId: "list_servers"
       tags:
-      - app
+      - handlers_app
+      operationId: machine_status
       responses:
-        200:
-          $ref: "#/components/responses/Servers"
-        401:
-          $ref: "#/components/responses/Unauthorized"
-        403:
-          $ref: "#/components/responses/Forbidden"
-
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Server'
+        '401':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
   /api/servers/start:
     put:
-      security: []
-      summary: "Start server"
-      operationId: "start_server"
       tags:
-      - app
+      - handlers_app
+      operationId: start_machine
       requestBody:
-        $ref: "#/components/requestBodies/StartServer"
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServerName'
+        required: true
       responses:
-        202:
-          $ref: "#/components/responses/Server"
-        400:
-          $ref: "#/components/responses/BadRequest"
-        401:
-          $ref: "#/components/responses/Forbidden"
-        403:
-          $ref: "#/components/responses/Forbidden"
-
+        '202':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Server'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '401':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
   /api/servers/stop:
     put:
-      security: []
-      summary: "Stop server"
-      operationId: "stop_server"
       tags:
-      - app
+      - handlers_app
+      operationId: stop_machine
       requestBody:
-        $ref: "#/components/requestBodies/StopServer"
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServerName'
+        required: true
       responses:
-        202:
-          $ref: "#/components/responses/Server"
-        400:
-          $ref: "#/components/responses/BadRequest"
-        401:
-          $ref: "#/components/responses/Forbidden"
-        403:
-          $ref: "#/components/responses/Forbidden"
-
+        '202':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Server'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '401':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
 components:
-  securitySchemes:
-    Bearer:
-      type: http
-      scheme: bearer
-      description: Credentials or access token for API
-
-  requestBodies:
-    StartServer:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ServerName"
-    StopServer:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ServerName"
-
-  responses:
-    Servers:
-      description: "Succeed to list servers"
-      content:
-        application/json:
-          schema:
-            type: array
-            items:
-              $ref: "#/components/schemas/Server"
-    Server:
-      description: "Succeed to get server"
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/Server"
-
-
-    TemporaryRedirect:
-      description: "Temporary Redirect"
-    BadRequest:
-      description: "Bad Request"
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorMessage"
-    Unauthorized:
-      description: "Unauthorized"
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorMessage"
-    Forbidden:
-      description: "Forbidden"
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorMessage"
-    NotFound:
-      description: "Not Found"
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorMessage"
-
   schemas:
-    ServerName:
-      type: object
-      properties:
-        name:
-          type: string
-      required:
-        - name
-    Server:
-      type: object
-      properties:
-        name:
-          type: string
-        hostname:
-          type: string
-        running:
-          type: boolean
-        reason:
-          type: string
-      required:
-        - name
-        - hostname
-        - running
-
     ErrorMessage:
       type: object
+      required:
+      - error
       properties:
         error:
           type: string
+    NonceResponse:
+      type: object
       required:
-        - error
+      - nonce
+      properties:
+        nonce:
+          type: string
+    OidcConfigResponse:
+      type: object
+      required:
+      - client_id
+      - authorization_endpoint
+      - token_endpoint
+      properties:
+        authorization_endpoint:
+          type: string
+        client_id:
+          type: string
+        token_endpoint:
+          type: string
+    Server:
+      type: object
+      required:
+      - name
+      - hostname
+      - running
+      properties:
+        hostname:
+          type: string
+        name:
+          type: string
+        reason:
+          type:
+          - string
+          - 'null'
+        running:
+          type: boolean
+    ServerName:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string

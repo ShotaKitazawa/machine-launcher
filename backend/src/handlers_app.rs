@@ -8,6 +8,8 @@ use axum::{
 };
 
 use machine_launcher_common::{Endpoint, ListServers, Server, ServerName, StartServer, StopServer};
+#[cfg(feature = "openapi-gen")]
+use machine_launcher_common::ErrorMessage;
 
 use crate::{AppState, Error};
 
@@ -22,6 +24,15 @@ pub fn routes(app_state: Arc<AppState>) -> Router<Arc<AppState>> {
         ))
 }
 
+#[cfg_attr(feature = "openapi-gen", utoipa::path(
+    get,
+    path = "/api/servers",
+    responses(
+        (status = 200, body = Vec<Server>),
+        (status = 401, body = ErrorMessage),
+        (status = 403, body = ErrorMessage),
+    )
+))]
 async fn machine_status(
     State(state): State<Arc<AppState>>,
 ) -> Result<(StatusCode, Json<Vec<Server>>), Error> {
@@ -38,6 +49,17 @@ async fn machine_status(
     Ok((StatusCode::OK, Json(res)))
 }
 
+#[cfg_attr(feature = "openapi-gen", utoipa::path(
+    put,
+    path = "/api/servers/start",
+    request_body = ServerName,
+    responses(
+        (status = 202, body = Server),
+        (status = 400, body = ErrorMessage),
+        (status = 401, body = ErrorMessage),
+        (status = 403, body = ErrorMessage),
+    )
+))]
 async fn start_machine(
     State(state): State<Arc<AppState>>,
     Json(req): Json<ServerName>,
@@ -60,6 +82,17 @@ async fn start_machine(
     }
 }
 
+#[cfg_attr(feature = "openapi-gen", utoipa::path(
+    put,
+    path = "/api/servers/stop",
+    request_body = ServerName,
+    responses(
+        (status = 202, body = Server),
+        (status = 400, body = ErrorMessage),
+        (status = 401, body = ErrorMessage),
+        (status = 403, body = ErrorMessage),
+    )
+))]
 async fn stop_machine(
     State(state): State<Arc<AppState>>,
     Json(req): Json<ServerName>,

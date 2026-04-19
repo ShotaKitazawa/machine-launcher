@@ -2,12 +2,13 @@
 rust = "stable"
 
 [tasks.generate]
-description = "Generate all code"
-run = "mise run generate-frontend-client"
+description = "Generate openapi.yaml from backend"
+run = "mise run generate-openapi"
 
-[tasks.generate-frontend-client]
-description = "Generate client code for frontend"
-run = "docker run --rm -v ${PWD}:/local openapitools/openapi-generator-cli generate -g rust -i /local/openapi.yaml -o /local/frontend/client"
+[tasks.generate-openapi]
+description = "Generate openapi.yaml from backend utoipa annotations"
+dir = "{{config_root}}/backend"
+run = "cargo run --features openapi-gen --bin generate_openapi > ../openapi.yaml"
 
 [tasks.build-backend]
 description = "Build backend"
