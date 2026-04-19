@@ -12,8 +12,8 @@ use axum_extra::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
-use jmespath::Variable;
 use chrono::Local;
+use jmespath::Variable;
 use openidconnect::{
     core::{CoreIdToken, CoreIdTokenClaims},
     Nonce, NonceVerifier,
@@ -74,10 +74,7 @@ pub async fn auth_middleware(
         nonce_store: state.nonce_store.clone(),
     };
     let _: &CoreIdTokenClaims = id_token
-        .claims(
-            &state.oidc_client.id_token_verifier(),
-            &nonce_verifier,
-        )
+        .claims(&state.oidc_client.id_token_verifier(), &nonce_verifier)
         .map_err(|e| Error::Forbidden(format!("Provided token is invalid: {:?}", e).into()))?;
 
     // MEMO: CoreIdToken cannot contain custom claims decided dynamically,

@@ -61,4 +61,4 @@ run = [
 
 [tasks.ci]
 description = "Run all CI checks"
-depends = ["ci-test-backend", "ci-lint-backend"]
+depends = ["ci-check-frontend", "ci-test-backend", "ci-lint-backend"]

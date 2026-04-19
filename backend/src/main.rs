@@ -8,9 +8,7 @@ use clap::Parser;
 use jmespath::compile;
 use machine_launcher::drivers::ipmi::IpmiDriver;
 use once_cell::sync::Lazy;
-use openidconnect::{
-    core::CoreProviderMetadata, ClientId, IssuerUrl,
-};
+use openidconnect::{core::CoreProviderMetadata, ClientId, IssuerUrl};
 use regex::Regex;
 use tokio::net::TcpListener;
 use tower_http::{services::ServeDir, trace::TraceLayer};
@@ -75,9 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .await
     .expect("Failed to discover provider metadata");
 
-    let oidc_authorization_endpoint = oidc_provider_metadata
-        .authorization_endpoint()
-        .to_string();
+    let oidc_authorization_endpoint = oidc_provider_metadata.authorization_endpoint().to_string();
     let oidc_token_endpoint = oidc_provider_metadata
         .token_endpoint()
         .expect("Provider metadata must have token_endpoint")
@@ -111,10 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "/api",
             machine_launcher::handlers_app::routes(app_state.clone()),
         )
-        .nest(
-            "/api",
-            machine_launcher::handlers_config::routes(),
-        )
+        .nest("/api", machine_launcher::handlers_config::routes())
         .nest_service("/public", get_service(ServeDir::new(STATIC_FILES_PATH)))
         .fallback_service(get_service(ServeDir::new(COMPILED_FILES_PATH)))
         .with_state(app_state)

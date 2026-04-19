@@ -4,7 +4,9 @@ use axum::{extract::State, routing::get, Json, Router};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use chrono::Local;
 
-use machine_launcher_common::{Endpoint, GetNonce, GetOidcConfig, NonceResponse, OidcConfigResponse};
+use machine_launcher_common::{
+    Endpoint, GetNonce, GetOidcConfig, NonceResponse, OidcConfigResponse,
+};
 
 use crate::AppState;
 

@@ -7,9 +7,9 @@ use axum::{
     Json, Router,
 };
 
-use machine_launcher_common::{Endpoint, ListServers, Server, ServerName, StartServer, StopServer};
 #[cfg(feature = "openapi-gen")]
 use machine_launcher_common::ErrorMessage;
+use machine_launcher_common::{Endpoint, ListServers, Server, ServerName, StartServer, StopServer};
 
 use crate::{AppState, Error};
 
