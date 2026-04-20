@@ -138,15 +138,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\$\{(\w+)\}").unwrap());
 
 fn substitute_env_variables(input: &str) -> Result<String, Box<dyn std::error::Error>> {
-    if envsubst::is_templated(input) {
-        let mut context = std::collections::HashMap::new();
-        for (_, [cap]) in RE.captures_iter(input).map(|c| c.extract()) {
-            let val = env::var(cap)?;
-            context.insert(cap.to_string(), val);
-        }
-        let res = envsubst::substitute(input, &context)?;
-        Ok(res)
-    } else {
-        Ok(input.to_string())
+    if !envsubst::is_templated(input) {
+        return Ok(input.to_string());
     }
+    let non_comment = input
+        .lines()
+        .filter(|l| !l.trim_start().starts_with('#'))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let mut context = std::collections::HashMap::new();
+    for (_, [cap]) in RE.captures_iter(&non_comment).map(|c| c.extract()) {
+        let val = env::var(cap)?;
+        context.insert(cap.to_string(), val);
+    }
+    let res = envsubst::substitute(input, &context)?;
+    Ok(res)
 }
