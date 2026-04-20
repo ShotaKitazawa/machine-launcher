@@ -17,7 +17,6 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub url: String,
     pub oidc: Option<OidcConfig>,
     pub drivers: Vec<DriverType>,
 }

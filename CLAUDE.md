@@ -18,7 +18,7 @@ mise run dev
 The backend requires a config file — default is `backend/example.toml`.
 Override with `CONFIG=path/to/config.toml mise run dev`.
 
-`example.toml` uses `${VAR}` env-var substitution. Required vars for production: `URL`, `AUTH0_CLIENT_ID`, `OIDC_SUB`, `IPMI_USERNAME`, `IPMI_PASSWORD`.
+`example.toml` uses `${VAR}` env-var substitution. Required vars for production: `AUTH0_CLIENT_ID`, `OIDC_SUB`, `IPMI_USERNAME`, `IPMI_PASSWORD`.
 
 ## OpenAPI workflow
 

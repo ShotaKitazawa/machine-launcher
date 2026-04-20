@@ -1,17 +1,15 @@
-url = "${URL}"
-
 [oidc]
 provider_url = "https://kanata.jp.auth0.com/"
-client_id = "${AUTH0_CLIENT_ID}"
-allowed_subs = ["${OIDC_SUB}"]
-
-[[drivers]]
-type = "Ipmi"
-name = "server01"
-server_addr = "192.168.0.22:623"
-username = "${IPMI_USERNAME}"
-password = "${IPMI_PASSWORD}"
+#client_id = "${AUTH0_CLIENT_ID}"
+#allowed_subs = ["${OIDC_SUB}"]
 
 [[drivers]]
 type = "Debug"
 name = "debug01"
+
+#[[drivers]]
+#type = "Ipmi"
+#name = "server01"
+#server_addr = "192.168.0.22:623"
+#username = "${IPMI_USERNAME}"
+#password = "${IPMI_PASSWORD}"
