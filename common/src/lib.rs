@@ -64,15 +64,13 @@ pub struct ErrorMessage {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct OidcConfigResponse {
-    pub client_id: String,
-    pub authorization_endpoint: String,
-    pub token_endpoint: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-pub struct NonceResponse {
-    pub nonce: String,
+    pub enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization_endpoint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_endpoint: Option<String>,
 }
 
 // --- Endpoint trait ---
@@ -113,13 +111,5 @@ impl Endpoint for GetOidcConfig {
     type Request = ();
     type Response = OidcConfigResponse;
     const PATH: &'static str = "/api/oidc-config";
-    const METHOD: &'static str = "GET";
-}
-
-pub struct GetNonce;
-impl Endpoint for GetNonce {
-    type Request = ();
-    type Response = NonceResponse;
-    const PATH: &'static str = "/api/auth/nonce";
     const METHOD: &'static str = "GET";
 }

@@ -1,9 +1,8 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use axum::{http::StatusCode, response::Response};
-use jmespath::Expression;
 use openidconnect::core::CoreClient;
 use openidconnect::{EndpointMaybeSet, EndpointNotSet, EndpointSet};
 
@@ -18,15 +17,20 @@ pub type OidcClient<HasTokenUrl = EndpointMaybeSet, HasUserInfoUrl = EndpointMay
     HasUserInfoUrl,
 >;
 
+pub enum OidcState {
+    Disabled,
+    Enabled {
+        client: Box<OidcClient>,
+        client_id: String,
+        authorization_endpoint: String,
+        token_endpoint: String,
+        allowed_subs: HashSet<String>,
+    },
+}
+
 pub struct AppState {
     pub drivers: HashMap<String, Arc<dyn PowerManagerTrait>>,
-    pub role_attribute_path_expr: Expression<'static>,
-    pub oidc_client: OidcClient,
-    pub oidc_client_id: String,
-    pub oidc_authorization_endpoint: String,
-    pub oidc_token_endpoint: String,
-    /// nonce → expiry Unix timestamp (seconds). Used for replay attack prevention.
-    pub nonce_store: Arc<Mutex<HashMap<String, i64>>>,
+    pub oidc: OidcState,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -88,14 +92,12 @@ pub mod middlewares;
         handlers_app::start_machine,
         handlers_app::stop_machine,
         handlers_config::oidc_config,
-        handlers_config::issue_nonce,
     ),
     components(schemas(
         machine_launcher_common::Server,
         machine_launcher_common::ServerName,
         machine_launcher_common::ErrorMessage,
         machine_launcher_common::OidcConfigResponse,
-        machine_launcher_common::NonceResponse,
     ))
 )]
 pub struct ApiDoc;

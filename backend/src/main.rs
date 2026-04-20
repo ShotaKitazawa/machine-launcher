@@ -1,11 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::{routing::get_service, serve, Router};
 use clap::Parser;
-use jmespath::compile;
 use machine_launcher::drivers::ipmi::IpmiDriver;
 use once_cell::sync::Lazy;
 use openidconnect::{core::CoreProviderMetadata, ClientId, IssuerUrl};
@@ -16,7 +15,7 @@ use tower_http::{services::ServeDir, trace::TraceLayer};
 use machine_launcher::{
     cmd::{Args, Config, DriverType},
     drivers::{debug::DebugDriver, traits::PowerManagerTrait, wake_on_lan::WakeOnLanDriver},
-    AppState, OidcClient,
+    AppState, OidcClient, OidcState,
 };
 
 const COMPILED_FILES_PATH: &str = "../frontend/dist/";
@@ -24,23 +23,19 @@ const STATIC_FILES_PATH: &str = "../frontend/public/";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Setup logger
     if std::env::var_os("RUST_LOG").is_none() {
         std::env::set_var("RUST_LOG", "info,tower_http=debug,axum::rejection=trace");
     }
     tracing_subscriber::fmt::init();
 
-    // Parse arguments
     let args = Args::parse();
 
-    // Parse config file
     let config_str =
-        std::fs::read_to_string(args.config).expect("args.config should be readable as file");
+        std::fs::read_to_string(&args.config).expect("args.config should be readable as file");
     let config_str_templated =
         substitute_env_variables(&config_str).expect("config should be templated by envsubst");
     let config: Config = toml::from_str(&config_str_templated).expect("config should be parsed");
 
-    // Drivers
     let mut drivers = HashMap::<String, Arc<dyn PowerManagerTrait>>::new();
     for driver_conf in config.drivers {
         match driver_conf {
@@ -64,44 +59,60 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
     }
 
-    // OIDC Client (for JWT verification only — token exchange is handled by the frontend)
-    let http_client = &reqwest::Client::new();
-    let oidc_provider_metadata = CoreProviderMetadata::discover_async(
-        IssuerUrl::new(config.oidc.provider_url)?,
-        http_client,
-    )
-    .await
-    .expect("Failed to discover provider metadata");
+    let oidc = if args.disable_oidc {
+        tracing::warn!("OIDC authentication is DISABLED — do not use in production");
+        OidcState::Disabled
+    } else {
+        let oidc_config = config
+            .oidc
+            .expect("--disable-oidc not set but [oidc] section is missing from config");
 
-    let oidc_authorization_endpoint = oidc_provider_metadata.authorization_endpoint().to_string();
-    let oidc_token_endpoint = oidc_provider_metadata
-        .token_endpoint()
-        .expect("Provider metadata must have token_endpoint")
-        .to_string();
-    let oidc_client_id = config.oidc.client_id.clone();
+        let http_client = &reqwest::Client::new();
+        let oidc_provider_metadata = CoreProviderMetadata::discover_async(
+            IssuerUrl::new(oidc_config.provider_url)?,
+            http_client,
+        )
+        .await
+        .expect("Failed to discover provider metadata");
 
-    let oidc_client = OidcClient::from_provider_metadata(
-        oidc_provider_metadata,
-        ClientId::new(config.oidc.client_id),
-        None, // No client_secret: frontend is a public client using PKCE
-    );
+        let authorization_endpoint = oidc_provider_metadata.authorization_endpoint().to_string();
+        let token_endpoint = oidc_provider_metadata
+            .token_endpoint()
+            .expect("Provider metadata must have token_endpoint")
+            .to_string();
+        let client_id = oidc_config.client_id.clone();
 
-    // Authorization based on ID Token
-    let role_attribute_path_expr = compile(&config.oidc.role_attribute_path)
-        .expect("args.role_attribute_path should be JMESPath format.");
+        let client = OidcClient::from_provider_metadata(
+            oidc_provider_metadata,
+            ClientId::new(oidc_config.client_id),
+            None,
+        );
 
-    // AppState
-    let app_state = Arc::new(AppState {
-        drivers,
-        oidc_client,
-        role_attribute_path_expr,
-        oidc_client_id,
-        oidc_authorization_endpoint,
-        oidc_token_endpoint,
-        nonce_store: Arc::new(Mutex::new(HashMap::new())),
-    });
+        let allowed_subs: HashSet<String> = if !oidc_config.allowed_subs.is_empty() {
+            oidc_config.allowed_subs.into_iter().collect()
+        } else {
+            std::env::var("OIDC_ALLOWED_SUBS")
+                .unwrap_or_default()
+                .split(',')
+                .filter(|s| !s.is_empty())
+                .map(|s| s.trim().to_string())
+                .collect()
+        };
+        if allowed_subs.is_empty() {
+            tracing::warn!("allowed_subs is not configured — all authenticated users will be allowed");
+        }
 
-    // Routing
+        OidcState::Enabled {
+            client: Box::new(client),
+            client_id,
+            authorization_endpoint,
+            token_endpoint,
+            allowed_subs,
+        }
+    };
+
+    let app_state = Arc::new(AppState { drivers, oidc });
+
     let app = Router::new()
         .nest(
             "/api",
@@ -113,7 +124,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(app_state)
         .layer(TraceLayer::new_for_http());
 
-    // Serve
     let tcp_listener =
         if let Some(std_listener) = listenfd::ListenFd::from_env().take_tcp_listener(0)? {
             TcpListener::from_std(std_listener)?

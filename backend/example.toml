@@ -3,7 +3,7 @@ url = "${URL}"
 [oidc]
 provider_url = "https://kanata.jp.auth0.com/"
 client_id = "${AUTH0_CLIENT_ID}"
-role_attribute_path = "contains(\"https://kanatakita.com/roles\", 'admin')"
+allowed_subs = ["${OIDC_SUB}"]
 
 [[drivers]]
 type = "Ipmi"

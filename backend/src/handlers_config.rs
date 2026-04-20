@@ -1,21 +1,13 @@
 use std::sync::Arc;
 
 use axum::{extract::State, routing::get, Json, Router};
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use chrono::Local;
 
-use machine_launcher_common::{
-    Endpoint, GetNonce, GetOidcConfig, NonceResponse, OidcConfigResponse,
-};
+use machine_launcher_common::{Endpoint, GetOidcConfig, OidcConfigResponse};
 
-use crate::AppState;
-
-const NONCE_TTL_SECS: i64 = 600;
+use crate::{AppState, OidcState};
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new()
-        .route(GetOidcConfig::PATH, get(oidc_config))
-        .route(GetNonce::PATH, get(issue_nonce))
+    Router::new().route(GetOidcConfig::PATH, get(oidc_config))
 }
 
 #[cfg_attr(feature = "openapi-gen", utoipa::path(
@@ -23,28 +15,24 @@ pub fn routes() -> Router<Arc<AppState>> {
     path = "/api/oidc-config",
     responses((status = 200, body = OidcConfigResponse))
 ))]
-async fn oidc_config(State(state): State<Arc<AppState>>) -> Json<OidcConfigResponse> {
-    Json(OidcConfigResponse {
-        client_id: state.oidc_client_id.clone(),
-        authorization_endpoint: state.oidc_authorization_endpoint.clone(),
-        token_endpoint: state.oidc_token_endpoint.clone(),
-    })
-}
-
-#[cfg_attr(feature = "openapi-gen", utoipa::path(
-    get,
-    path = "/api/auth/nonce",
-    responses((status = 200, body = NonceResponse))
-))]
-async fn issue_nonce(State(state): State<Arc<AppState>>) -> Json<NonceResponse> {
-    let bytes: [u8; 32] = rand::random();
-    let nonce = URL_SAFE_NO_PAD.encode(bytes);
-
-    let now = Local::now().timestamp();
-    let expiry = now + NONCE_TTL_SECS;
-    let mut store = state.nonce_store.lock().unwrap();
-    store.retain(|_, &mut exp| exp > now);
-    store.insert(nonce.clone(), expiry);
-
-    Json(NonceResponse { nonce })
+pub async fn oidc_config(State(state): State<Arc<AppState>>) -> Json<OidcConfigResponse> {
+    match &state.oidc {
+        OidcState::Disabled => Json(OidcConfigResponse {
+            enabled: false,
+            client_id: None,
+            authorization_endpoint: None,
+            token_endpoint: None,
+        }),
+        OidcState::Enabled {
+            client_id,
+            authorization_endpoint,
+            token_endpoint,
+            ..
+        } => Json(OidcConfigResponse {
+            enabled: true,
+            client_id: Some(client_id.clone()),
+            authorization_endpoint: Some(authorization_endpoint.clone()),
+            token_endpoint: Some(token_endpoint.clone()),
+        }),
+    }
 }

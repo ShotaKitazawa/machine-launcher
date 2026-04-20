@@ -1,5 +1,5 @@
 use machine_launcher_common::{
-    Endpoint, GetNonce, GetOidcConfig, ListServers, ServerName, StartServer, StopServer,
+    Endpoint, GetOidcConfig, ListServers, ServerName, StartServer, StopServer,
 };
 
 pub struct Client {
@@ -61,9 +61,5 @@ impl Client {
         &self,
     ) -> Result<<GetOidcConfig as Endpoint>::Response, reqwest::Error> {
         self.get::<GetOidcConfig>().await
-    }
-
-    pub async fn get_nonce(&self) -> Result<<GetNonce as Endpoint>::Response, reqwest::Error> {
-        self.get::<GetNonce>().await
     }
 }

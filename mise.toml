@@ -7,7 +7,7 @@ rust = "stable"
 [tasks.dev-backend]
 description = "Run backend with hot reload"
 dir = "{{config_root}}/backend"
-run = "systemfd --no-pid -s http::8080 -- cargo watch -x 'run --bin machine-launcher -- --config ${CONFIG:-example.toml}'"
+run = "systemfd --no-pid -s http::8080 -- cargo watch -x 'run --bin machine-launcher -- --config ${CONFIG:-example.toml} --disable-oidc'"
 
 [tasks.dev-frontend]
 description = "Run frontend dev server with hot reload (proxy /api to :8080)"
