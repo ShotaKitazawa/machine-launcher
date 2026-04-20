@@ -114,11 +114,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app_state = Arc::new(AppState { drivers, oidc });
 
     let app = Router::new()
-        .nest(
-            "/api",
-            machine_launcher::handlers_app::routes(app_state.clone()),
-        )
-        .nest("/api", machine_launcher::handlers_config::routes())
+        .merge(machine_launcher::handlers_app::routes(app_state.clone()))
+        .merge(machine_launcher::handlers_config::routes())
         .nest_service("/public", get_service(ServeDir::new(STATIC_FILES_PATH)))
         .fallback_service(get_service(ServeDir::new(COMPILED_FILES_PATH)))
         .with_state(app_state)
