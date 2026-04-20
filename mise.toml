@@ -1,5 +1,31 @@
 [tools]
 rust = "stable"
+"cargo:cargo-watch" = "latest"
+"cargo:systemfd" = "latest"
+"cargo:trunk" = "latest"
+
+[tasks.dev-backend]
+description = "Run backend with hot reload"
+dir = "{{config_root}}/backend"
+run = "systemfd --no-pid -s http::8080 -- cargo watch -x 'run --bin machine-launcher -- --config ${CONFIG:-example.toml}'"
+
+[tasks.dev-frontend]
+description = "Run frontend dev server with hot reload (proxy /api to :8080)"
+dir = "{{config_root}}/frontend"
+run = [
+  "rustup target add wasm32-unknown-unknown",
+  "trunk serve",
+]
+
+[tasks.dev]
+description = "Run backend and frontend in dev mode with hot reload"
+run = """
+#!/usr/bin/env bash
+trap 'kill $(jobs -p) 2>/dev/null' EXIT INT TERM
+mise run dev-backend &
+mise run dev-frontend &
+wait
+"""
 
 [tasks.generate]
 description = "Generate openapi.yaml from backend"
