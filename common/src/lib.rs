@@ -4,7 +4,6 @@ use std::io::{Error, ErrorKind};
 use base64::prelude::*;
 use serde_json::Value;
 
-pub const COOKIE_KEY: &str = "token";
 
 pub fn all_claims_from_jwt(jwt: &str) -> Result<HashMap<String, Value>, Error> {
     let token_payload = String::from_utf8(

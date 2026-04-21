@@ -6,7 +6,7 @@ use axum::{http::StatusCode, response::Response};
 use openidconnect::core::CoreClient;
 use openidconnect::{EndpointMaybeSet, EndpointNotSet, EndpointSet};
 
-use crate::drivers::traits::{PowerManagerTrait, PowerStatus};
+use crate::drivers::traits::PowerManagerTrait;
 
 pub type OidcClient<HasTokenUrl = EndpointMaybeSet, HasUserInfoUrl = EndpointMaybeSet> = CoreClient<
     EndpointSet,

@@ -3,7 +3,7 @@ use ping::Error as PingError;
 use wakey::WakeyError;
 use wakey::WolPacket;
 
-use crate::{Error, PowerManagerTrait, PowerStatus};
+use crate::{drivers::traits::{PowerManagerTrait, PowerStatus}, Error};
 
 impl From<WakeyError> for Error {
     fn from(e: WakeyError) -> Self {

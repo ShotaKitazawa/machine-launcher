@@ -6,7 +6,7 @@ use std::{
 use chrono::Local;
 use rust_ipmi::{IPMIClient, IPMIClientError};
 
-use crate::{Error, PowerManagerTrait, PowerStatus};
+use crate::{drivers::traits::{PowerManagerTrait, PowerStatus}, Error};
 
 const CLIENT_RENEW_PERIOD: i64 = 60;
 
