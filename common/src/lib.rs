@@ -4,7 +4,6 @@ use std::io::{Error, ErrorKind};
 use base64::prelude::*;
 use serde_json::Value;
 
-
 pub fn all_claims_from_jwt(jwt: &str) -> Result<HashMap<String, Value>, Error> {
     let token_payload = String::from_utf8(
         BASE64_URL_SAFE_NO_PAD
@@ -70,6 +69,16 @@ pub struct OidcConfigResponse {
     pub authorization_endpoint: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token_endpoint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub audience: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct UserInfo {
+    pub sub: String,
+    pub name: Option<String>,
+    pub picture: Option<String>,
 }
 
 // --- Endpoint trait ---
@@ -110,5 +119,13 @@ impl Endpoint for GetOidcConfig {
     type Request = ();
     type Response = OidcConfigResponse;
     const PATH: &'static str = "/api/oidc-config";
+    const METHOD: &'static str = "GET";
+}
+
+pub struct GetUserInfo;
+impl Endpoint for GetUserInfo {
+    type Request = ();
+    type Response = UserInfo;
+    const PATH: &'static str = "/api/userinfo";
     const METHOD: &'static str = "GET";
 }

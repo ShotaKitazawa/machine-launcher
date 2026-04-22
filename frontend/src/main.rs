@@ -3,13 +3,10 @@ use base64::Engine;
 use gloo::storage::{LocalStorage, SessionStorage, Storage};
 use gloo::utils::window;
 use gloo_timers::callback::Interval;
-use js_sys::Date;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
-
-use machine_launcher_common::all_claims_from_jwt;
 
 mod components;
 use components::contents::Contents;
@@ -19,14 +16,14 @@ use components::header::Header;
 mod state;
 use state::{Server, Userinfo};
 
-const TOKEN_KEY: &str = "id_token";
+const ACCESS_TOKEN_KEY: &str = "access_token";
 const PKCE_VERIFIER_KEY: &str = "pkce_verifier";
 const OAUTH_STATE_KEY: &str = "oauth_state";
 const NONCE_KEY: &str = "nonce";
 
 #[derive(Debug, Deserialize)]
 struct TokenResponse {
-    id_token: String,
+    access_token: String,
 }
 
 fn generate_random_bytes_b64(len: usize) -> String {
@@ -42,6 +39,14 @@ fn generate_pkce_challenge(verifier: &str) -> String {
 pub async fn fetch_oidc_config() -> Option<machine_launcher_common::OidcConfigResponse> {
     client::Client::new(window().origin())
         .get_oidc_config()
+        .await
+        .ok()
+}
+
+async fn fetch_userinfo(token: &str) -> Option<machine_launcher_common::UserInfo> {
+    client::Client::new(window().origin())
+        .with_token(token.to_string())
+        .get_userinfo()
         .await
         .ok()
 }
@@ -65,7 +70,7 @@ pub async fn start_login() {
     SessionStorage::set(NONCE_KEY, &nonce).ok();
 
     let redirect_uri = format!("{}/callback", window().origin());
-    let auth_url = format!(
+    let mut auth_url = format!(
         "{}?response_type=code&client_id={}&redirect_uri={}&scope=openid+profile+email\
          &code_challenge={}&code_challenge_method=S256&state={}&nonce={}",
         config.authorization_endpoint.unwrap_or_default(),
@@ -75,34 +80,47 @@ pub async fn start_login() {
         state,
         nonce,
     );
+    if let Some(aud) = config.audience {
+        auth_url.push_str(&format!("&audience={}", js_sys::encode_uri_component(&aud)));
+    }
 
     window().location().set_href(&auth_url).ok();
 }
 
 pub async fn logout() {
-    LocalStorage::delete(TOKEN_KEY);
+    LocalStorage::delete(ACCESS_TOKEN_KEY);
     window().location().set_href("/").ok();
 }
 
-async fn handle_callback() -> Option<String> {
-    let search = window().location().search().ok()?;
+async fn handle_callback() {
+    let search = window().location().search().unwrap_or_default();
     let params = parse_query_string(&search);
 
-    let code = params.get("code")?.clone();
-    let state_param = params.get("state")?.clone();
+    let Some(code) = params.get("code").cloned() else {
+        return;
+    };
+    let Some(state_param) = params.get("state").cloned() else {
+        return;
+    };
 
-    let stored_state = SessionStorage::get::<String>(OAUTH_STATE_KEY).ok()?;
+    let Ok(stored_state) = SessionStorage::get::<String>(OAUTH_STATE_KEY) else {
+        return;
+    };
     if state_param != stored_state {
         gloo::console::error!("OAuth state mismatch");
-        return None;
+        return;
     }
 
-    let verifier = SessionStorage::get::<String>(PKCE_VERIFIER_KEY).ok()?;
+    let Ok(verifier) = SessionStorage::get::<String>(PKCE_VERIFIER_KEY) else {
+        return;
+    };
     SessionStorage::delete(PKCE_VERIFIER_KEY);
     SessionStorage::delete(OAUTH_STATE_KEY);
     SessionStorage::delete(NONCE_KEY);
 
-    let config = fetch_oidc_config().await?;
+    let Some(config) = fetch_oidc_config().await else {
+        return;
+    };
     let redirect_uri = format!("{}/callback", window().origin());
 
     let body = format!(
@@ -114,19 +132,21 @@ async fn handle_callback() -> Option<String> {
     );
 
     let http_client = reqwest::Client::new();
-    let resp = http_client
+    let Ok(resp) = http_client
         .post(&config.token_endpoint.unwrap_or_default())
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(body)
         .send()
         .await
-        .ok()?;
+    else {
+        return;
+    };
 
-    let token_resp: TokenResponse = resp.json().await.ok()?;
-    LocalStorage::set(TOKEN_KEY, &token_resp.id_token).ok();
-
+    let Ok(token_resp) = resp.json::<TokenResponse>().await else {
+        return;
+    };
+    LocalStorage::set(ACCESS_TOKEN_KEY, &token_resp.access_token).ok();
     window().location().set_href("/").ok();
-    Some(token_resp.id_token)
 }
 
 fn parse_query_string(search: &str) -> std::collections::HashMap<String, String> {
@@ -146,7 +166,6 @@ fn App() -> Html {
     let user = use_state(|| None as Option<Userinfo>);
     let servers = use_state(|| vec![] as Vec<Server>);
     let token = use_state(|| None as Option<String>);
-    // None = not yet determined, Some(true) = OIDC enabled, Some(false) = disabled
     let oidc_enabled = use_state(|| None as Option<bool>);
 
     {
@@ -155,48 +174,41 @@ fn App() -> Html {
         let oidc_enabled = oidc_enabled.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
+                // Handle OIDC callback
                 let search = window().location().search().unwrap_or_default();
                 if search.contains("code=") {
                     handle_callback().await;
                     return;
                 }
 
-                // Check OIDC config first
-                if let Some(config) = fetch_oidc_config().await {
-                    oidc_enabled.set(Some(config.enabled));
-                    if !config.enabled {
-                        // Dev mode: skip auth, show as logged-in user
-                        user.set(Some(Userinfo {
-                            name: "Local Dev".to_string(),
-                            icon_url: String::new(),
-                        }));
-                        return;
-                    }
+                // Check OIDC config
+                let Some(config) = fetch_oidc_config().await else {
+                    return;
+                };
+                oidc_enabled.set(Some(config.enabled));
+
+                // Dev mode: skip auth entirely
+                if !config.enabled {
+                    user.set(Some(Userinfo {
+                        name: "Local Dev".to_string(),
+                        icon_url: String::new(),
+                    }));
+                    return;
                 }
 
-                if let Ok(t) = LocalStorage::get::<String>(TOKEN_KEY) {
-                    if let Ok(claims) = all_claims_from_jwt(&t) {
-                        let expired_at = claims
-                            .get("exp")
-                            .and_then(|v| v.as_f64())
-                            .unwrap_or(0.0);
-                        if get_unix_time() > expired_at {
-                            LocalStorage::delete(TOKEN_KEY);
-                            user.set(None);
-                            token.set(None);
-                        } else {
-                            user.set(Some(Userinfo {
-                                name: claims
-                                    .get("name")
-                                    .map_or_else(|| "".to_string(), |v| v.to_string()),
-                                icon_url: claims
-                                    .get("picture")
-                                    .map_or_else(|| "".to_string(), |v| v.to_string()),
-                            }));
-                            token.set(Some(t));
-                        }
-                    }
-                }
+                // Check stored access token via /api/userinfo
+                let Ok(stored_token) = LocalStorage::get::<String>(ACCESS_TOKEN_KEY) else {
+                    return;
+                };
+                let Some(info) = fetch_userinfo(&stored_token).await else {
+                    LocalStorage::delete(ACCESS_TOKEN_KEY);
+                    return;
+                };
+                user.set(Some(Userinfo {
+                    name: info.name.unwrap_or_default(),
+                    icon_url: info.picture.unwrap_or_default(),
+                }));
+                token.set(Some(stored_token));
             });
             || ()
         });
@@ -259,10 +271,6 @@ fn compare_servers(mut a: Vec<Server>, mut b: Vec<Server>) -> bool {
     a.sort_by(|x, y| x.hostname.cmp(&y.hostname));
     b.sort_by(|x, y| x.hostname.cmp(&y.hostname));
     a == b
-}
-
-fn get_unix_time() -> f64 {
-    Date::now() / 1000.0
 }
 
 fn main() {

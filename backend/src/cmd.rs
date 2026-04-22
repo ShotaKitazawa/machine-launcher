@@ -29,6 +29,9 @@ pub struct OidcConfig {
     // OIDC Client Identifer. (https://openid.net/specs/openid-connect-core-1_0.html#Terminology)
     pub client_id: String,
 
+    // API audience. Required to receive a JWT access token from the IdP.
+    pub audience: Option<String>,
+
     // Allowed OIDC subject identifiers. If empty, all authenticated users are allowed.
     // Can also be set via OIDC_ALLOWED_SUBS env var (comma-separated); config takes precedence.
     #[serde(default)]

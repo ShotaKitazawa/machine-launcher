@@ -24,6 +24,8 @@ pub enum OidcState {
         client_id: String,
         authorization_endpoint: String,
         token_endpoint: String,
+        userinfo_endpoint: String,
+        audience: Option<String>,
         allowed_subs: HashSet<String>,
     },
 }

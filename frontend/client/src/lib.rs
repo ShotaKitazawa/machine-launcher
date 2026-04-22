@@ -1,5 +1,5 @@
 use machine_launcher_common::{
-    Endpoint, GetOidcConfig, ListServers, ServerName, StartServer, StopServer,
+    Endpoint, GetOidcConfig, GetUserInfo, ListServers, ServerName, StartServer, StopServer,
 };
 
 pub struct Client {
@@ -61,5 +61,11 @@ impl Client {
         &self,
     ) -> Result<<GetOidcConfig as Endpoint>::Response, reqwest::Error> {
         self.get::<GetOidcConfig>().await
+    }
+
+    pub async fn get_userinfo(
+        &self,
+    ) -> Result<<GetUserInfo as Endpoint>::Response, reqwest::Error> {
+        self.get::<GetUserInfo>().await
     }
 }

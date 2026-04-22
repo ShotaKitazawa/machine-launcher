@@ -80,7 +80,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .token_endpoint()
             .expect("Provider metadata must have token_endpoint")
             .to_string();
+        let userinfo_endpoint = oidc_provider_metadata
+            .userinfo_endpoint()
+            .expect("Provider metadata must have userinfo_endpoint")
+            .to_string();
         let client_id = oidc_config.client_id.clone();
+        let audience = oidc_config.audience.clone();
 
         let client = OidcClient::from_provider_metadata(
             oidc_provider_metadata,
@@ -107,6 +112,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             client_id,
             authorization_endpoint,
             token_endpoint,
+            userinfo_endpoint,
+            audience,
             allowed_subs,
         }
     };
