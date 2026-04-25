@@ -1,7 +1,7 @@
 # ===== Build frontend Stage =====
 FROM rust:1 AS frontend-builder
 WORKDIR /app/
-COPY utils ./utils
+COPY common ./common
 COPY frontend ./frontend
 RUN rustup target add wasm32-unknown-unknown \
       && cargo install --locked trunk \
@@ -10,7 +10,7 @@ RUN rustup target add wasm32-unknown-unknown \
 # ===== Build backend Stage =====
 FROM rust:1 AS backend-builder
 WORKDIR /app/
-COPY utils ./utils
+COPY common ./common
 COPY backend ./backend
 RUN cd backend && cargo build --release
 

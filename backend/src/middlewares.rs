@@ -46,13 +46,17 @@ pub async fn auth_middleware(
         .bearer_auth(&token_str)
         .send()
         .await
-        .map_err(|_| Error::InternalServerError("Failed to contact IdP userinfo endpoint".into()))?;
+        .map_err(|_| {
+            Error::InternalServerError("Failed to contact IdP userinfo endpoint".into())
+        })?;
 
     if resp.status() == reqwest::StatusCode::UNAUTHORIZED {
         return Err(Error::Unauthorized("Token rejected by IdP".into()));
     }
     if !resp.status().is_success() {
-        return Err(Error::InternalServerError("IdP userinfo returned unexpected status".into()));
+        return Err(Error::InternalServerError(
+            "IdP userinfo returned unexpected status".into(),
+        ));
     }
 
     let userinfo: serde_json::Value = resp

@@ -6,18 +6,6 @@ info:
     name: ''
   version: 0.1.0
 paths:
-  /api/auth/nonce:
-    get:
-      tags:
-      - handlers_config
-      operationId: issue_nonce
-      responses:
-        '200':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NonceResponse'
   /api/oidc-config:
     get:
       tags:
@@ -137,26 +125,29 @@ components:
       properties:
         error:
           type: string
-    NonceResponse:
-      type: object
-      required:
-      - nonce
-      properties:
-        nonce:
-          type: string
     OidcConfigResponse:
       type: object
       required:
-      - client_id
-      - authorization_endpoint
-      - token_endpoint
+      - enabled
       properties:
+        audience:
+          type:
+          - string
+          - 'null'
         authorization_endpoint:
-          type: string
+          type:
+          - string
+          - 'null'
         client_id:
-          type: string
+          type:
+          - string
+          - 'null'
+        enabled:
+          type: boolean
         token_endpoint:
-          type: string
+          type:
+          - string
+          - 'null'
     Server:
       type: object
       required:

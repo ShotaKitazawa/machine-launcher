@@ -1,6 +1,9 @@
 use std::sync::{Arc, RwLock};
 
-use crate::{drivers::traits::{PowerManagerTrait, PowerStatus}, Error};
+use crate::{
+    drivers::traits::{PowerManagerTrait, PowerStatus},
+    Error,
+};
 
 #[derive(Debug, Clone)]
 pub struct DebugDriver {

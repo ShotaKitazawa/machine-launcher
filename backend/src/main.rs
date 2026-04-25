@@ -104,7 +104,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .collect()
         };
         if allowed_subs.is_empty() {
-            tracing::warn!("allowed_subs is not configured — all authenticated users will be allowed");
+            tracing::warn!(
+                "allowed_subs is not configured — all authenticated users will be allowed"
+            );
         }
 
         OidcState::Enabled {
