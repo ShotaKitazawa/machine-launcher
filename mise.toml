@@ -2,7 +2,7 @@
 rust = "stable"
 "cargo:cargo-watch" = "latest"
 "cargo:systemfd" = "latest"
-"cargo:trunk" = "latest"
+"github:trunk-rs/trunk" = "0.21.14"
 
 [tasks.dev-backend]
 description = "Run backend with hot reload"
