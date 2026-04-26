@@ -1,4 +1,5 @@
 use gloo::utils::window;
+use machine_launcher_common::{Endpoint, ServerName, StartServer, StopServer};
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
@@ -84,16 +85,21 @@ pub fn ServerModal(props: &ServerDialogProps) -> Html {
         let is_open = props.is_open.clone();
         Callback::from(move |_: MouseEvent| {
             let server_name = server_name.clone();
-            let c = client::Client::new(window().origin());
             spawn_local(async move {
-                if is_running {
-                    if let Err(e) = c.stop_server(server_name).await {
-                        gloo::console::log!(format!("{:?}", e))
-                    }
+                let req = reqwest::Client::new();
+                let result = if is_running {
+                    req.put(format!("{}{}", window().origin(), StopServer::PATH))
+                        .json(&ServerName { name: server_name })
+                        .send()
+                        .await
                 } else {
-                    if let Err(e) = c.start_server(server_name).await {
-                        gloo::console::log!(format!("{:?}", e))
-                    }
+                    req.put(format!("{}{}", window().origin(), StartServer::PATH))
+                        .json(&ServerName { name: server_name })
+                        .send()
+                        .await
+                };
+                if let Err(e) = result {
+                    gloo::console::log!(format!("{:?}", e))
                 }
             });
             is_open.set(false)

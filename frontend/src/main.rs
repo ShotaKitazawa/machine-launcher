@@ -3,6 +3,7 @@ use base64::Engine;
 use gloo::storage::{LocalStorage, SessionStorage, Storage};
 use gloo::utils::window;
 use gloo_timers::callback::Interval;
+use machine_launcher_common::Endpoint;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use wasm_bindgen_futures::spawn_local;
@@ -37,16 +38,32 @@ fn generate_pkce_challenge(verifier: &str) -> String {
 }
 
 pub async fn fetch_oidc_config() -> Option<machine_launcher_common::OidcConfigResponse> {
-    client::Client::new(window().origin())
-        .get_oidc_config()
+    reqwest::Client::new()
+        .get(format!(
+            "{}{}",
+            window().origin(),
+            machine_launcher_common::GetOidcConfig::PATH
+        ))
+        .send()
+        .await
+        .ok()?
+        .json()
         .await
         .ok()
 }
 
 async fn fetch_userinfo(token: &str) -> Option<machine_launcher_common::UserInfo> {
-    client::Client::new(window().origin())
-        .with_token(token.to_string())
-        .get_userinfo()
+    reqwest::Client::new()
+        .get(format!(
+            "{}{}",
+            window().origin(),
+            machine_launcher_common::GetUserInfo::PATH
+        ))
+        .bearer_auth(token)
+        .send()
+        .await
+        .ok()?
+        .json()
         .await
         .ok()
 }
@@ -227,11 +244,16 @@ fn App() -> Html {
                 let servers = servers.clone();
                 let user = user.clone();
                 spawn_local(async move {
-                    let mut c = client::Client::new(window().origin());
+                    let mut req = reqwest::Client::new().get(format!(
+                        "{}{}",
+                        window().origin(),
+                        machine_launcher_common::ListServers::PATH
+                    ));
                     if let Some(t) = current_token {
-                        c = c.with_token(t);
+                        req = req.bearer_auth(t);
                     }
-                    match c.list_servers().await {
+                    let result = async { req.send().await?.json::<Vec<Server>>().await }.await;
+                    match result {
                         Ok(res) => {
                             if !compare_servers(res.clone(), servers.to_vec()) {
                                 servers.set(res)
