@@ -1,0 +1,93 @@
+[tools]
+rust = "stable"
+"cargo:cargo-watch" = "latest"
+"cargo:systemfd" = "latest"
+"github:trunk-rs/trunk" = "0.21.14"
+
+[tasks.dev-backend]
+description = "Run backend with hot reload"
+dir = "{{config_root}}/backend"
+run = "systemfd --no-pid -s http::8080 -- cargo watch -x 'run --bin machine-launcher -- --config ${CONFIG:-example.toml} --disable-oidc'"
+
+[tasks.dev-frontend]
+description = "Run frontend dev server with hot reload (proxy /api to :8080)"
+dir = "{{config_root}}/frontend"
+run = [
+  "rustup target add wasm32-unknown-unknown",
+  "trunk serve",
+]
+
+[tasks.dev]
+description = "Run backend and frontend in dev mode with hot reload"
+run = """
+#!/usr/bin/env bash
+trap 'kill $(jobs -p) 2>/dev/null' EXIT INT TERM
+mise run dev-backend &
+mise run dev-frontend &
+wait
+"""
+
+[tasks.generate]
+description = "Generate openapi.yaml from backend"
+run = "mise run generate-openapi"
+
+[tasks.generate-openapi]
+description = "Generate openapi.yaml from backend utoipa annotations"
+dir = "{{config_root}}/backend"
+run = "cargo run --features openapi-gen --bin generate_openapi > ../openapi.yaml"
+
+[tasks.build-backend]
+description = "Build backend"
+dir = "{{config_root}}/backend"
+run = "cargo build --release"
+
+[tasks.build-frontend]
+description = "Build frontend (WASM)"
+dir = "{{config_root}}/frontend"
+run = [
+  "rustup target add wasm32-unknown-unknown",
+  "trunk build",
+]
+
+[tasks.build]
+description = "Build backend and frontend"
+depends = ["build-backend", "build-frontend"]
+
+[tasks.ci-check-frontend]
+description = "Type-check frontend (WASM)"
+dir = "{{config_root}}/frontend"
+run = [
+  "rustup target add wasm32-unknown-unknown",
+  "cargo check --target wasm32-unknown-unknown",
+]
+
+[tasks.ci-test-backend]
+description = "Run backend tests"
+dir = "{{config_root}}/backend"
+run = "cargo test"
+
+[tasks.ci-lint-backend]
+description = "Lint backend"
+dir = "{{config_root}}/backend"
+run = "cargo clippy -- -D warnings"
+
+[tasks.format]
+description = "Format all code"
+run = "mise run format-backend"
+
+[tasks.format-backend]
+description = "Format backend code"
+dir = "{{config_root}}/backend"
+run = "cargo fmt"
+
+[tasks.pre-merge]
+description = "Run generate, format, and CI checks before merging"
+run = [
+  "mise run generate",
+  "mise run format",
+  "mise run ci",
+]
+
+[tasks.ci]
+description = "Run all CI checks"
+depends = ["ci-check-frontend", "ci-test-backend", "ci-lint-backend"]

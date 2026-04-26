@@ -7,14 +7,17 @@ pub struct Args {
     /// Config file
     #[arg(long)]
     pub config: String,
+
+    /// Disable OIDC authentication (for local development only)
+    #[arg(long, default_value_t = false)]
+    pub disable_oidc: bool,
 }
 
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub url: String,
-    pub oidc: OidcConfig,
+    pub oidc: Option<OidcConfig>,
     pub drivers: Vec<DriverType>,
 }
 
@@ -26,11 +29,13 @@ pub struct OidcConfig {
     // OIDC Client Identifer. (https://openid.net/specs/openid-connect-core-1_0.html#Terminology)
     pub client_id: String,
 
-    // OIDC Client Secret. (https://openid.net/specs/openid-connect-core-1_0.html#Terminology)
-    pub client_secret: String,
+    // API audience. Required to receive a JWT access token from the IdP.
+    pub audience: Option<String>,
 
-    // role_attribute_path is in JMESPath format. Only entities that return true are allowed.
-    pub role_attribute_path: String,
+    // Allowed OIDC subject identifiers. If empty, all authenticated users are allowed.
+    // Can also be set via OIDC_ALLOWED_SUBS env var (comma-separated); config takes precedence.
+    #[serde(default)]
+    pub allowed_subs: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]

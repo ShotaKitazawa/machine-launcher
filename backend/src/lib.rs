@@ -1,13 +1,12 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use axum::{http::StatusCode, response::Response};
-use jmespath::Expression;
 use openidconnect::core::CoreClient;
-use openidconnect::{EndpointMaybeSet, EndpointNotSet, EndpointSet, PkceCodeVerifier};
+use openidconnect::{EndpointMaybeSet, EndpointNotSet, EndpointSet};
 
-use crate::drivers::traits::{PowerManagerTrait, PowerStatus};
+use crate::drivers::traits::PowerManagerTrait;
 
 pub type OidcClient<HasTokenUrl = EndpointMaybeSet, HasUserInfoUrl = EndpointMaybeSet> = CoreClient<
     EndpointSet,
@@ -18,11 +17,22 @@ pub type OidcClient<HasTokenUrl = EndpointMaybeSet, HasUserInfoUrl = EndpointMay
     HasUserInfoUrl,
 >;
 
+pub enum OidcState {
+    Disabled,
+    Enabled {
+        client: Box<OidcClient>,
+        client_id: String,
+        authorization_endpoint: String,
+        token_endpoint: String,
+        userinfo_endpoint: String,
+        audience: Option<String>,
+        allowed_subs: HashSet<String>,
+    },
+}
+
 pub struct AppState {
     pub drivers: HashMap<String, Arc<dyn PowerManagerTrait>>,
-    pub role_attribute_path_expr: Expression<'static>,
-    pub pkce_verifiers: Mutex<HashMap<String, PkceCodeVerifier>>, // Store PKCE verifiers temporarily
-    pub oidc_client: OidcClient<EndpointSet, EndpointMaybeSet>,
+    pub oidc: OidcState,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -59,15 +69,10 @@ impl Error {
 }
 impl axum::response::IntoResponse for Error {
     fn into_response(self) -> Response {
-        #[derive(Debug, serde::Serialize)]
-        struct ErrorResponse {
-            error: String,
-        }
-
         tracing::error!("{}", self);
         (
             self.status_code(),
-            axum::Json(ErrorResponse {
+            axum::Json(machine_launcher_common::ErrorMessage {
                 error: format!("{}", self),
             }),
         )
@@ -78,5 +83,23 @@ impl axum::response::IntoResponse for Error {
 pub mod cmd;
 pub mod drivers;
 pub mod handlers_app;
-pub mod handlers_oauth;
+pub mod handlers_config;
 pub mod middlewares;
+
+#[cfg(feature = "openapi-gen")]
+#[derive(utoipa::OpenApi)]
+#[openapi(
+    paths(
+        handlers_app::machine_status,
+        handlers_app::start_machine,
+        handlers_app::stop_machine,
+        handlers_config::oidc_config,
+    ),
+    components(schemas(
+        machine_launcher_common::Server,
+        machine_launcher_common::ServerName,
+        machine_launcher_common::ErrorMessage,
+        machine_launcher_common::OidcConfigResponse,
+    ))
+)]
+pub struct ApiDoc;

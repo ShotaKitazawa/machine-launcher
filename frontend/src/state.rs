@@ -4,4 +4,4 @@ pub struct Userinfo {
     pub icon_url: String,
 }
 
-pub type Server = openapi::models::Server;
+pub type Server = machine_launcher_common::Server;

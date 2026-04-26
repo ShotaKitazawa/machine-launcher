@@ -6,6 +6,7 @@ use super::server::Server as ServerItem;
 pub struct ContentsProps {
     pub user: Option<crate::state::Userinfo>,
     pub servers: Vec<crate::state::Server>,
+    pub oidc_enabled: Option<bool>,
 }
 
 #[function_component]
@@ -16,7 +17,8 @@ pub fn Contents(props: &ContentsProps) -> Html {
         ""
     };
 
-    if props.user.is_none() {
+    // Show login button only when OIDC is enabled and user is not logged in
+    if props.user.is_none() && props.oidc_enabled != Some(false) {
         html! {
         <div>
             <a href="/auth/login">

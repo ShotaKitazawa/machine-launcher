@@ -1,10 +1,7 @@
 use gloo::utils::window;
+use machine_launcher_common::{Endpoint, ServerName, StartServer, StopServer};
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
-
-use openapi::apis::app_api::{start_server, stop_server};
-use openapi::apis::configuration::Configuration;
-use openapi::models::ServerName;
 
 #[derive(PartialEq, Properties)]
 pub struct ServerProps {
@@ -88,20 +85,21 @@ pub fn ServerModal(props: &ServerDialogProps) -> Html {
         let is_open = props.is_open.clone();
         Callback::from(move |_: MouseEvent| {
             let server_name = server_name.clone();
-            let mut c = Configuration::new();
-            c.base_path = window().origin();
             spawn_local(async move {
-                match is_running {
-                    true => {
-                        if let Err(e) = stop_server(&c, ServerName { name: server_name }).await {
-                            gloo::console::log!(format!("{:?}", e))
-                        }
-                    }
-                    false => {
-                        if let Err(e) = start_server(&c, ServerName { name: server_name }).await {
-                            gloo::console::log!(format!("{:?}", e))
-                        }
-                    }
+                let req = reqwest::Client::new();
+                let result = if is_running {
+                    req.put(format!("{}{}", window().origin(), StopServer::PATH))
+                        .json(&ServerName { name: server_name })
+                        .send()
+                        .await
+                } else {
+                    req.put(format!("{}{}", window().origin(), StartServer::PATH))
+                        .json(&ServerName { name: server_name })
+                        .send()
+                        .await
+                };
+                if let Err(e) = result {
+                    gloo::console::log!(format!("{:?}", e))
                 }
             });
             is_open.set(false)
