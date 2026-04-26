@@ -1,8 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cargo build:*)",
-      "Bash(mise run *)"
+      "Bash(mise run *)",
+      "WebSearch"
     ]
   }
 }
